@@ -7,8 +7,6 @@ interface Position { x: number; y: number; }
 
 const STORAGE_KEY = "hrms.chatbot.pos";
 
-const DEFAULT_POS: Position = { x: 0, y: 0 }; // computed via bottom/right offset on mount
-
 export function FloatingChatbot() {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Position | null>(null);
@@ -98,7 +96,7 @@ export function FloatingChatbot() {
       {/* Chat panel */}
       {open && (
         <div
-          className="fixed z-[60] w-[340px] max-w-[calc(100vw-16px)] card overflow-hidden fade-in"
+          className="fixed z-[60] w-[340px] max-w-[calc(100vw-16px)] card p-0 overflow-hidden fade-in"
           style={{
             right: Math.min(window.innerWidth - pos.x - 56, window.innerWidth - 356) < 8 ? undefined : window.innerWidth - pos.x - 56,
             left: window.innerWidth - pos.x < 356 ? 8 : undefined,
@@ -108,15 +106,15 @@ export function FloatingChatbot() {
           }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 text-white" style={{ background: "linear-gradient(135deg, var(--brand-700), var(--brand-900))" }}>
+          <div className="flex items-center justify-between px-4 py-3 bg-[var(--brand-600)] text-white">
             <div className="flex items-center gap-2.5">
               <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center">
-                <Icon name="Bot" size={18} />
+                <Icon name="Bot" size={17} />
               </div>
               <div>
-                <div className="text-sm font-semibold leading-tight">HR Assistant</div>
-                <div className="text-[0.7rem] text-white/70 flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Online
+                <div className="text-[0.83rem] font-semibold leading-tight">HR Assistant</div>
+                <div className="text-[0.7rem] text-white/65 flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/70" /> Online
                 </div>
               </div>
             </div>
@@ -126,14 +124,14 @@ export function FloatingChatbot() {
           </div>
 
           {/* Messages */}
-          <div className="h-[320px] overflow-y-auto p-3 space-y-3 bg-[var(--bg)]">
+          <div className="h-[300px] overflow-y-auto p-3.5 space-y-2.5 bg-[var(--surface-2)]">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                  className={`max-w-[80%] px-3 py-2 rounded-2xl text-[0.83rem] leading-relaxed ${
                     m.from === "user"
-                      ? "bg-[var(--brand-700)] text-white rounded-br-sm"
-                      : "bg-white text-[var(--text)] border border-[var(--border)] rounded-bl-sm"
+                      ? "bg-[var(--brand-600)] text-white rounded-br-md"
+                      : "bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-bl-md"
                   }`}
                 >
                   {m.text}
@@ -143,12 +141,12 @@ export function FloatingChatbot() {
           </div>
 
           {/* Quick suggestions */}
-          <div className="px-3 pb-2 flex flex-wrap gap-1.5 bg-[var(--bg)]">
+          <div className="px-3.5 py-2 flex flex-wrap gap-1.5 bg-[var(--surface-2)] border-t border-[var(--border)]">
             {["Leave balance", "Apply leave", "My payslip", "Contact HR"].map((q) => (
               <button
                 key={q}
-                onClick={() => { setInput(q); }}
-                className="text-[0.7rem] px-2 py-1 rounded-full bg-white border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--brand-50)] hover:text-[var(--brand-700)] hover:border-[var(--brand-200)]"
+                onClick={() => setInput(q)}
+                className="text-[0.7rem] px-2.5 py-1 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--brand-700)] hover:border-[var(--brand-200)] transition-colors"
               >
                 {q}
               </button>
@@ -156,8 +154,8 @@ export function FloatingChatbot() {
           </div>
 
           {/* Input */}
-          <div className="flex items-center gap-2 p-2.5 border-t border-[var(--border)] bg-white">
-            <button className="h-8 w-8 rounded-md text-[var(--text-muted)] hover:bg-[var(--slate-100)] flex items-center justify-center">
+          <div className="flex items-center gap-2 p-2.5 border-t border-[var(--border)] bg-[var(--surface)]">
+            <button className="h-8 w-8 rounded-md text-[var(--text-subtle)] hover:bg-[var(--surface-2)] flex items-center justify-center">
               <Icon name="Paperclip" size={16} />
             </button>
             <input
@@ -165,11 +163,11 @@ export function FloatingChatbot() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send()}
               placeholder="Type a message..."
-              className="flex-1 input-base py-2 text-sm"
+              className="flex-1 input-base py-2 text-[0.83rem]"
             />
             <button
               onClick={send}
-              className="h-8 w-8 rounded-md bg-[var(--brand-700)] text-white flex items-center justify-center hover:bg-[var(--brand-800)]"
+              className="h-8 w-8 rounded-lg bg-[var(--brand-600)] hover:bg-[var(--brand-700)] text-white flex items-center justify-center transition-colors"
             >
               <Icon name="Send" size={15} />
             </button>
@@ -182,17 +180,17 @@ export function FloatingChatbot() {
         ref={fabRef}
         onPointerDown={onPointerDown}
         onClick={handleClick}
-        className={`fixed z-[60] h-14 w-14 rounded-full flex items-center justify-center text-white cursor-grab active:cursor-grabbing touch-none select-none transition-shadow ${dragging ? "" : "hover:scale-105"}`}
+        className="fixed z-[60] rounded-full flex items-center justify-center text-white cursor-grab active:cursor-grabbing touch-none select-none bg-[var(--brand-600)] hover:bg-[var(--brand-700)] transition-colors"
         style={{
           left: pos.x,
           top: pos.y,
-          background: "linear-gradient(135deg, var(--brand-500), var(--brand-700))",
-          boxShadow: dragging ? "var(--shadow-glow)" : "0 8px 24px -6px rgba(11,58,131,0.5)",
+          width: 52,
+          height: 52,
+          boxShadow: dragging ? "var(--shadow-lg)" : "0 6px 18px -4px rgba(37,99,235,0.45)",
         }}
         title="Drag me anywhere • Click to chat"
       >
-        {open ? <Icon name="X" size={22} /> : <Icon name="MessageSquare" size={22} />}
-        <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[var(--danger)] ring-2 ring-white" />
+        {open ? <Icon name="X" size={21} /> : <Icon name="MessageSquare" size={21} />}
       </button>
     </>
   );

@@ -1,64 +1,71 @@
 @import "tailwindcss";
 
 /* =========================================================
-   HRMS Design System — brand tokens
-   Brand: deep navy (#0B3A83) with a modern slate/indigo accent
+   HRMS Design System
+   ---------------------------------------------------------
+   Clean · light · professional.
+     • White cards on a soft neutral canvas
+     • ONE accent colour, used sparingly
+     • Crisp 1px borders, whisper-soft shadows
+     • Generous whitespace, calm type
    ========================================================= */
 :root {
-  /* Brand palette */
-  --brand-50: #eef4fc;
-  --brand-100: #d6e4f6;
-  --brand-200: #b0c9ee;
-  --brand-300: #7fa7e1;
-  --brand-400: #4d82d3;
-  --brand-500: #2563eb;
-  --brand-600: #1b4fbf;
-  --brand-700: #0b3a83;   /* brand primary */
-  --brand-800: #0a2f6b;
-  --brand-900: #082550;
+  /* Accent ramp — the single source of colour */
+  --brand-50: #eff5ff;
+  --brand-100: #dbe8fe;
+  --brand-200: #bfd5fe;
+  --brand-300: #93b4fd;
+  --brand-400: #608ffa;
+  --brand-500: #3b6ef6;
+  --brand-600: #2563eb;   /* primary accent */
+  --brand-700: #1d4ed8;   /* hover / active text */
+  --brand-800: #1e40af;
+  --brand-900: #1e3a8a;
+  --navy-700: #0b3a83;    /* deep navy — brand panel only */
 
-  /* Neutrals (slate) */
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --slate-500: #64748b;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
+  /* Neutrals */
+  --slate-50: #f9fafb;
+  --slate-100: #f3f4f6;
+  --slate-200: #e5e7eb;
+  --slate-300: #d1d5db;
+  --slate-400: #9ca3af;
+  --slate-500: #6b7280;
+  --slate-600: #4b5563;
+  --slate-700: #374151;
+  --slate-800: #1f2937;
+  --slate-900: #111827;
 
   /* Semantic */
-  --success: #16a34a;
-  --success-bg: #dcfce7;
-  --warning: #d97706;
-  --warning-bg: #fef3c7;
+  --success: #0f9d58;
+  --success-bg: #e9f7ef;
+  --warning: #b45309;
+  --warning-bg: #fdf3e3;
   --danger: #dc2626;
-  --danger-bg: #fee2e2;
-  --info: #0891b2;
-  --info-bg: #cffafe;
+  --danger-bg: #fdecec;
+  --info: #0e7490;
+  --info-bg: #e6f4f8;
 
   /* Surfaces */
-  --bg: #f6f8fb;
+  --bg: #f7f8fa;
   --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --text-muted: #64748b;
-  --text-subtle: #94a3b8;
+  --surface-2: #f9fafb;
+  --border: #e8eaef;
+  --border-strong: #d9dde5;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --text-subtle: #9ca3af;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06);
-  --shadow-md: 0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 6px -2px rgb(15 23 42 / 0.05);
-  --shadow-lg: 0 12px 32px -8px rgb(15 23 42 / 0.16);
-  --shadow-glow: 0 8px 30px -6px rgb(11 58 131 / 0.35);
+  /* Shadows — restrained */
+  --shadow-xs: 0 1px 2px 0 rgb(16 24 40 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(16 24 40 / 0.06), 0 1px 2px -1px rgb(16 24 40 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 12px 32px -8px rgb(16 24 40 / 0.14);
 
   /* Radii */
-  --radius-sm: 6px;
+  --radius-sm: 8px;
   --radius: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 
   /* Layout */
   --sidebar-width: 264px;
@@ -79,12 +86,10 @@
   --color-brand-700: var(--brand-700);
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
-
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
-
   --font-sans: var(--font-sans);
 }
 
@@ -92,86 +97,151 @@
   border-color: var(--border);
 }
 
-html, body {
+html,
+body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--slate-300); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: var(--slate-400); }
+::-webkit-scrollbar-thumb {
+  background: var(--slate-300);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--slate-400); background-clip: content-box; }
 
-/* Utility helpers */
+/* =========================================================
+   Surfaces
+   ========================================================= */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.card-hover:hover {
+  border-color: var(--border-strong);
   box-shadow: var(--shadow-sm);
 }
 
-.btn-primary {
-  background: var(--brand-700);
-  color: #fff;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  transition: background .15s ease, box-shadow .15s ease, transform .1s ease;
+.panel-2 {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
-.btn-primary:hover { background: var(--brand-800); box-shadow: var(--shadow-md); }
-.btn-primary:active { transform: translateY(1px); }
+
+/* =========================================================
+   Buttons
+   ========================================================= */
+.btn-primary {
+  background: var(--brand-600);
+  color: #fff;
+  border-radius: var(--radius);
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+.btn-primary:hover { background: var(--brand-700); }
 
 .btn-ghost {
-  background: transparent;
-  color: var(--slate-600);
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-  transition: background .15s ease, color .15s ease;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.btn-ghost:hover { background: var(--slate-100); color: var(--text); }
+.btn-ghost:hover { background: var(--surface-2); border-color: var(--border-strong); }
 
+.btn-subtle {
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.btn-subtle:hover { background: var(--surface-2); color: var(--text); }
+
+/* =========================================================
+   Inputs
+   ========================================================= */
 .input-base {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   padding: 0.625rem 0.875rem;
   color: var(--text);
   font-size: 0.875rem;
-  transition: border-color .15s ease, box-shadow .15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input-base::placeholder { color: var(--text-subtle); }
 .input-base:focus {
   outline: none;
   border-color: var(--brand-500);
-  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
+  box-shadow: 0 0 0 3px var(--brand-50);
 }
 
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-subtle);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* =========================================================
+   Badges
+   ========================================================= */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
   padding: 0.125rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   line-height: 1.25rem;
+  white-space: nowrap;
 }
+.badge-brand   { background: var(--brand-50); color: var(--brand-700); }
 .badge-success { background: var(--success-bg); color: var(--success); }
 .badge-warning { background: var(--warning-bg); color: var(--warning); }
 .badge-danger  { background: var(--danger-bg); color: var(--danger); }
 .badge-info    { background: var(--info-bg); color: var(--info); }
 .badge-muted   { background: var(--slate-100); color: var(--slate-600); }
 
-.fade-in { animation: fadeIn .25s ease both; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+/* =========================================================
+   Motion — subtle only
+   ========================================================= */
+.fade-in { animation: fadeIn 0.22s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-/* Animated gradient for login brand panel */
-.brand-gradient {
-  background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(37, 99, 235, 0.45), transparent 60%),
-    radial-gradient(900px 500px at 10% 110%, rgba(11, 58, 131, 0.65), transparent 55%),
-    linear-gradient(135deg, #0a2f6b 0%, #0b3a83 45%, #1b4fbf 100%);
+/* Overlays — drawers and their backdrops */
+.drawer-in { animation: drawerIn 0.26s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+@keyframes drawerIn {
+  from { transform: translateX(28px); opacity: 0.5; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.overlay-in { animation: overlayIn 0.2s ease both; }
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

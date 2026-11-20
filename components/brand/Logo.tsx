@@ -4,33 +4,54 @@ interface LogoProps {
   variant?: "light" | "dark";
 }
 
+/**
+ * HRMS brand mark — a clean "H" monogram on a rounded tile.
+ * Simple, geometric, unmistakably ours.
+ */
 export function Logo({ size = 36, showText = true, variant = "dark" }: LogoProps) {
-  const textColor = variant === "light" ? "#ffffff" : "#0b3a83";
+  const dark = variant === "dark";
   return (
     <div className="flex items-center gap-2.5 select-none">
-      <div
-        className="relative flex items-center justify-center rounded-xl shadow-md"
+      <span
+        className="flex items-center justify-center flex-shrink-0"
         style={{
           width: size,
           height: size,
-          background: "linear-gradient(135deg, #1b4fbf 0%, #0b3a83 55%, #082550 100%)",
-          boxShadow: "0 6px 18px -6px rgba(11,58,131,0.55)",
+          borderRadius: size * 0.3,
+          background: dark
+            ? "linear-gradient(150deg, #2563eb 0%, #0b3a83 100%)"
+            : "linear-gradient(150deg, #ffffff 0%, #dbe8fe 100%)",
         }}
       >
-        <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="white" strokeWidth="1.6" strokeLinejoin="round" opacity="0.9" />
-          <path d="M12 7v10M7 9.5l10 5M17 9.5l-10 5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.95" />
-        </svg>
-      </div>
+        <span
+          className="font-extrabold"
+          style={{
+            fontSize: size * 0.52,
+            lineHeight: 1,
+            color: dark ? "#ffffff" : "#0b3a83",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          H
+        </span>
+      </span>
+
       {showText && (
-        <div className="leading-tight">
-          <div style={{ color: textColor }} className="text-[1.05rem] font-bold tracking-tight">
-            HRMS<span style={{ color: "#2563eb" }}>.</span>
-          </div>
-          <div style={{ color: variant === "light" ? "rgba(255,255,255,0.7)" : "#64748b" }} className="text-[0.62rem] font-medium uppercase tracking-[0.18em]">
+        <span className="leading-tight">
+          <span
+            className="block text-[1rem] font-bold tracking-tight"
+            style={{ color: dark ? "var(--text)" : "#ffffff" }}
+          >
+            HRMS
+            <span style={{ color: dark ? "var(--brand-600)" : "#93b4fd" }}>.</span>
+          </span>
+          <span
+            className="block text-[0.56rem] font-semibold uppercase tracking-[0.2em]"
+            style={{ color: dark ? "var(--text-subtle)" : "rgba(255,255,255,0.55)" }}
+          >
             Workspace
-          </div>
-        </div>
+          </span>
+        </span>
       )}
     </div>
   );

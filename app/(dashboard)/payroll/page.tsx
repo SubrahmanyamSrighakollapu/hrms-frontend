@@ -12,8 +12,8 @@ const PAYSLIPS = [
 ];
 
 export default function PayrollPage() {
-  const { user } = useAuth();
-  const isHr = user?.role === "ADMIN" || user?.role === "HR";
+  const { can } = useAuth();
+  const isHr = can("payroll", "MANAGE");
 
   return (
     <div>
