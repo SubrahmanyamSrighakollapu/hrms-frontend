@@ -154,13 +154,6 @@ function toEmployee(row: AssignmentDto): EmployeeDef {
   };
 }
 
-/** Demo sign-in shortcuts used by the login screen (match the backend seed). */
-export const DEMO_ACCOUNTS = [
-  { email: "admin@hrms.local", password: "Admin@123", label: "Administrator" },
-  { email: "hr@hrms.local", password: "Hr@12345", label: "HR Manager" },
-  { email: "employee@hrms.local", password: "Employee@123", label: "Employee" },
-] as const;
-
 /* ---------------- client cache ---------------- */
 
 const EVENT = "hrms:rbac-change";

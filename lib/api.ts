@@ -11,7 +11,8 @@
  *   can react (e.g. sign the user out when the refresh token is rejected).
  */
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1").replace(/\/+$/, "");
+/** Full API base URL including the version prefix (e.g. `http://host/api/v1`). */
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1").replace(/\/+$/, "");
 
 const ACCESS_KEY = "hrms.auth.accessToken";
 const REFRESH_KEY = "hrms.auth.refreshToken";
@@ -69,7 +70,7 @@ export function clearTokens(): void {
 /* ---------------- request plumbing ---------------- */
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   /** Send the Bearer token (default true). */
   auth?: boolean;
@@ -148,9 +149,61 @@ async function request<T>(path: string, options: RequestOptions, retry = true): 
   return (payload?.data ?? payload) as T;
 }
 
+/**
+ * Multipart upload. Shares the 401-refresh flow with `request` but lets the
+ * browser set the `Content-Type` (with the multipart boundary) itself.
+ */
+async function requestForm<T>(path: string, form: FormData, retry = true): Promise<T> {
+  const headers: Record<string, string> = {};
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  let res = await fetch(`${API_URL}${path}`, { method: "POST", headers, body: form });
+
+  if (res.status === 401 && retry && (await refreshTokens())) {
+    const retryHeaders: Record<string, string> = {};
+    const nextToken = getAccessToken();
+    if (nextToken) retryHeaders.Authorization = `Bearer ${nextToken}`;
+    res = await fetch(`${API_URL}${path}`, { method: "POST", headers: retryHeaders, body: form });
+  }
+
+  const payload = (await res.json().catch(() => null)) as Envelope<T> | null;
+
+  if (!res.ok) {
+    if (res.status === 401) clearTokens();
+    throw new ApiError(res.status, payload?.message ?? `Upload failed (${res.status})`, payload?.details);
+  }
+
+  return (payload?.data ?? payload) as T;
+}
+
+async function downloadFile(path: string, retry = true): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  let res = await fetch(`${API_URL}${path}`, { headers });
+  if (res.status === 401 && retry && (await refreshTokens())) {
+    const nextToken = getAccessToken();
+    res = await fetch(`${API_URL}${path}`, {
+      headers: nextToken ? { Authorization: `Bearer ${nextToken}` } : {},
+    });
+  }
+
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => null)) as Envelope<unknown> | null;
+    if (res.status === 401) clearTokens();
+    throw new ApiError(res.status, payload?.message ?? `Download failed (${res.status})`, payload?.details);
+  }
+  return res.blob();
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
+  put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  upload: <T>(path: string, form: FormData) => requestForm<T>(path, form),
+  download: (path: string) => downloadFile(path),
 };

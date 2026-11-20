@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
@@ -24,15 +24,13 @@ export function AssigneeTab({
 }) {
   const toast = useToast();
 
-  const [roleId, setRoleId] = useState<string>("");
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
   const [pick, setPick] = useState("");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!roles.length) return;
-    setRoleId((current) => (roles.some((r) => r.id === current) ? current : roles[0].id));
-  }, [roles]);
+  // Fall back to the first role whenever the selection is empty or has gone away.
+  const roleId = roles.some((r) => r.id === selectedRoleId) ? selectedRoleId : (roles[0]?.id ?? "");
 
   const role = useMemo(() => roles.find((r) => r.id === roleId) ?? null, [roles, roleId]);
   const fallbackRole = useMemo(() => roles.find((r) => r.key === "EMPLOYEE") ?? null, [roles]);
@@ -100,7 +98,7 @@ export function AssigneeTab({
           <select
             id="assignee-role"
             value={roleId}
-            onChange={(e) => { setRoleId(e.target.value); setPick(""); }}
+            onChange={(e) => { setSelectedRoleId(e.target.value); setPick(""); }}
             className="input-base py-2 text-sm"
           >
             {roles.map((r) => (
@@ -154,7 +152,7 @@ export function AssigneeTab({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search assignees…"
-              className="input-base py-2 pl-9 text-sm"
+              className="input-base input-base--leading-icon py-2 text-sm"
             />
           </div>
         </div>

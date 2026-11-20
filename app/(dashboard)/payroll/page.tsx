@@ -1,120 +1,359 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Icon } from "@/components/ui/Icon";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useToast } from "@/components/ui/Toast";
+import {
+  downloadPayslip,
+  listPayslips,
+  uploadPayslips,
+  type Payslip,
+  type PayslipBatchResult,
+} from "@/lib/payroll";
 
-const PAYSLIPS = [
-  { id: 1, month: "October 2026", period: "01 Oct – 31 Oct", status: "Paid", net: "₹85,400", uploaded: "Nov 01, 2026" },
-  { id: 2, month: "September 2026", period: "01 Sep – 30 Sep", status: "Paid", net: "₹82,100", uploaded: "Oct 01, 2026" },
-  { id: 3, month: "August 2026", period: "01 Aug – 31 Aug", status: "Paid", net: "₹82,100", uploaded: "Sep 01, 2026" },
-  { id: 4, month: "July 2026", period: "01 Jul – 31 Jul", status: "Paid", net: "₹79,800", uploaded: "Aug 01, 2026" },
-];
+const MAX_BATCH_FILES = 100;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export default function PayrollPage() {
-  const { can } = useAuth();
+  const { can, loading: authLoading } = useAuth();
+  const toast = useToast();
   const isHr = can("payroll", "MANAGE");
+  const canView = can("payroll");
+  const fileInput = useRef<HTMLInputElement>(null);
+  const now = new Date();
+  const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [payrollPeriod, setPayrollPeriod] = useState(currentPeriod);
+  const [periodFilter, setPeriodFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [batchResult, setBatchResult] = useState<PayslipBatchResult | null>(null);
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  const fetchList = useCallback(
+    () =>
+      listPayslips({
+        payrollPeriod: periodFilter || undefined,
+        q: isHr ? search.trim() || undefined : undefined,
+        page,
+        pageSize: 50,
+      }),
+    [isHr, page, periodFilter, search],
+  );
+
+  useEffect(() => {
+    if (authLoading || !canView) return;
+    let active = true;
+    fetchList()
+      .then((result) => {
+        if (!active) return;
+        setPayslips(result.payslips);
+        setTotal(result.total);
+        setTotalPages(result.totalPages);
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(cause instanceof Error ? cause.message : "Could not load payslips.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authLoading, canView, fetchList]);
+
+  const refreshList = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchList();
+      setPayslips(result.payslips);
+      setTotal(result.total);
+      setTotalPages(result.totalPages);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not load payslips.");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchList]);
+
+  const acceptFiles = (selected: FileList | File[]) => {
+    const selectedFiles = Array.from(selected);
+    const pdfs = selectedFiles.filter((file) => file.name.toLowerCase().endsWith(".pdf"));
+    const withinSizeLimit = pdfs.filter((file) => file.size <= MAX_FILE_BYTES);
+    if (pdfs.length !== selectedFiles.length) toast.error("Only PDF files can be added.");
+    if (withinSizeLimit.length !== pdfs.length) toast.error("Each PDF must be 10 MB or smaller.");
+    const capacity = Math.max(0, MAX_BATCH_FILES - files.length);
+    if (withinSizeLimit.length > capacity) toast.error("A batch can contain up to 100 files.");
+    const accepted = withinSizeLimit.slice(0, capacity);
+    if (accepted.length) {
+      setFiles((current) => [...current, ...accepted]);
+      setBatchResult(null);
+    }
+  };
+
+  const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) acceptFiles(event.target.files);
+    event.target.value = "";
+  };
+
+  const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragging(false);
+    acceptFiles(event.dataTransfer.files);
+  };
+
+  const submitUpload = async () => {
+    if (!files.length || uploading) return;
+    setUploading(true);
+    setBatchResult(null);
+    try {
+      const result = await uploadPayslips(payrollPeriod, files);
+      setBatchResult(result);
+      setFiles([]);
+      toast.success(`${result.uploaded} payslip${result.uploaded === 1 ? "" : "s"} uploaded; ${result.rejected} rejected.`);
+      await refreshList();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Could not upload the payslips.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const download = async (payslip: Payslip) => {
+    if (downloading) return;
+    setDownloading(payslip.id);
+    try {
+      const blob = await downloadPayslip(payslip.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = payslip.originalFilename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Could not download this payslip.");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const onSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const onPeriodFilterChange = (value: string) => {
+    setPeriodFilter(value);
+    setPage(1);
+  };
+
+  const formatPeriod = (period: string) =>
+    new Date(`${period}-01T00:00:00.000Z`).toLocaleDateString("en", { month: "long", year: "numeric", timeZone: "UTC" });
+
+  const formatFileSize = (size: number) =>
+    size < 1024 * 1024 ? `${Math.max(1, Math.round(size / 1024))} KB` : `${(size / (1024 * 1024)).toFixed(1)} MB`;
 
   return (
     <div>
       <PageHeader
         title="Payroll"
-        subtitle={isHr ? "Upload and manage employee payslips" : "View and download your payslips"}
-        actions={
-          isHr && (
-            <button className="btn-primary px-3.5 py-2 rounded-lg flex items-center gap-2 text-sm">
-              <Icon name="Plus" size={15} /> Upload Payslip
-            </button>
-          )
-        }
+        subtitle={isHr ? "Upload payroll PDFs in bulk and review employee payslips" : "View and download your payslips"}
       />
 
-      {isHr ? (
-        <div className="space-y-5">
-          {/* Upload dropzone */}
-          <div className="card p-8 border-dashed border-2 flex flex-col items-center justify-center text-center" style={{ borderColor: "var(--brand-300)", background: "var(--brand-50)" }}>
-            <div className="h-14 w-14 rounded-2xl bg-white flex items-center justify-center mb-3" style={{ boxShadow: "var(--shadow-sm)" }}>
-              <Icon name="Download" size={26} className="text-[var(--brand-700)]" />
+      {isHr && (
+        <section className="card mb-5 p-5 sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h3 className="font-semibold text-[var(--text)]">Bulk payslip upload</h3>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
+                Choose a payroll month. Each PDF must be named with its employee code, such as EMP-0001.pdf.
+              </p>
             </div>
-            <h3 className="font-semibold text-[var(--text)]">Upload Monthly Payslips</h3>
-            <p className="text-sm text-[var(--text-muted)] mt-1 max-w-md">Drag & drop payslip PDFs here, or click to browse. Files are organized by employee and month automatically.</p>
-            <button className="btn-primary mt-4 px-5 py-2 rounded-lg text-sm flex items-center gap-2">
-              <Icon name="Plus" size={15} /> Browse Files
+            <label className="w-full text-xs font-medium text-[var(--text-muted)] sm:w-48">
+              Payroll month
+              <input
+                type="month"
+                value={payrollPeriod}
+                onChange={(event) => setPayrollPeriod(event.target.value)}
+                className="input-base mt-1 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+              dragging ? "border-[var(--brand-500)] bg-[var(--brand-50)]" : "border-[var(--border-strong)] bg-[var(--surface-2)]"
+            }`}
+          >
+            <input ref={fileInput} type="file" accept=".pdf,application/pdf" multiple onChange={onFileChange} className="hidden" />
+            <Icon name="Upload" size={24} className="mx-auto text-[var(--brand-700)]" />
+            <p className="mt-2 text-sm font-medium text-[var(--text)]">Drop employee payslip PDFs here</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Up to 100 files per batch, 10 MB per file</p>
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              className="btn-ghost mt-3 inline-flex items-center gap-2 px-3.5 py-2 text-sm"
+            >
+              <Icon name="File" size={15} /> Browse PDFs
             </button>
-            <p className="text-xs text-[var(--text-subtle)] mt-3">Supported: PDF · Max 10MB per file</p>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { l: "Total Employees", v: "248", i: "Users", c: "var(--brand-50)" },
-              { l: "Uploaded (Oct)", v: "231", i: "Check", c: "var(--success-bg)" },
-              { l: "Pending", v: "17", i: "Clock3", c: "var(--warning-bg)" },
-              { l: "Total Payout", v: "₹1.24Cr", i: "Wallet", c: "var(--info-bg)" },
-            ].map((s) => (
-              <div key={s.l} className="card p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ background: s.c }}>
-                  <Icon name={s.i} size={19} className="text-[var(--brand-700)]" />
-                </div>
-                <div>
-                  <div className="text-xs text-[var(--text-muted)]">{s.l}</div>
-                  <div className="text-xl font-bold text-[var(--text)]">{s.v}</div>
-                </div>
+          {files.length > 0 && (
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-2 text-sm text-[var(--text-muted)]">
+                <Icon name="FileText" size={16} />
+                <span className="truncate">{files.length} file{files.length === 1 ? "" : "s"} selected</span>
+                <button
+                  type="button"
+                  onClick={() => setFiles([])}
+                  className="btn-subtle px-2 py-1 text-xs"
+                  aria-label="Clear selected files"
+                >
+                  Clear
+                </button>
               </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
+              <button
+                type="button"
+                onClick={() => void submitUpload()}
+                disabled={uploading || !payrollPeriod}
+                className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Icon name={uploading ? "LoaderCircle" : "Upload"} size={15} className={uploading ? "animate-spin" : ""} />
+                {uploading ? "Uploading..." : "Upload batch"}
+              </button>
+            </div>
+          )}
 
-      {/* Payslip table (both roles see it) */}
-      <div className="card mt-5 overflow-hidden">
-        <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
-          <h3 className="font-semibold text-[var(--text)]">{isHr ? "Recent Uploads" : "My Payslips"}</h3>
-          <div className="relative">
-            <Icon name="Search" size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
-            <input placeholder="Search payslips..." className="input-base py-1.5 pl-8 text-sm w-56" />
+          {batchResult && (
+            <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+              <p className="text-sm font-semibold text-[var(--text)]">
+                {batchResult.uploaded} uploaded, {batchResult.rejected} rejected for {formatPeriod(batchResult.payrollPeriod)}
+              </p>
+              {batchResult.results.some((result) => result.status === "REJECTED") && (
+                <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs text-[var(--danger)]">
+                  {batchResult.results.filter((result) => result.status === "REJECTED").map((result, index) => (
+                    <li key={`${result.filename}-${index}`}>{result.filename}: {result.reason}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {!canView && !authLoading && (
+        <div className="card p-8 text-center text-sm text-[var(--text-muted)]">
+          You do not have permission to view payroll.
+        </div>
+      )}
+
+      {canView && (
+        <section className="card overflow-hidden">
+          <div className="flex flex-col gap-3 border-b border-[var(--border)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold text-[var(--text)]">{isHr ? "Payslip records" : "My payslips"}</h3>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">{total} record{total === 1 ? "" : "s"}</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <label className="sr-only" htmlFor="payroll-month-filter">Filter by month</label>
+              <input
+                id="payroll-month-filter"
+                type="month"
+                value={periodFilter}
+                onChange={(event) => onPeriodFilterChange(event.target.value)}
+                className="input-base py-1.5 text-sm sm:w-40"
+              />
+              {isHr && (
+                <div className="relative sm:w-56">
+                  <Icon name="Search" size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+                  <input
+                    value={search}
+                    onChange={(event) => onSearchChange(event.target.value)}
+                    placeholder="Search employee..."
+                    className="input-base input-base--leading-icon py-1.5 text-sm"
+                  />
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--slate-50)]">
-              <tr className="text-left text-xs text-[var(--text-muted)]">
-                {isHr && <th className="px-4 py-3 font-medium">Employee</th>}
-                <th className="px-4 py-3 font-medium">Month</th>
-                <th className="px-4 py-3 font-medium">Pay Period</th>
-                <th className="px-4 py-3 font-medium">Net Pay</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Uploaded</th>
-                <th className="px-4 py-3 font-medium text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PAYSLIPS.map((p) => (
-                <tr key={p.id} className="border-t border-[var(--border)] hover:bg-[var(--slate-50)]">
-                  {isHr && (
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-[var(--brand-50)] text-[var(--brand-700)] text-xs font-bold flex items-center justify-center">RV</div>
-                        <span className="font-medium text-[var(--text)]">Rahul Verma</span>
-                      </div>
-                    </td>
-                  )}
-                  <td className="px-4 py-3 font-medium text-[var(--text)]">{p.month}</td>
-                  <td className="px-4 py-3 text-[var(--text-muted)]">{p.period}</td>
-                  <td className="px-4 py-3 font-semibold text-[var(--text)]">{p.net}</td>
-                  <td className="px-4 py-3"><span className="badge badge-success">{p.status}</span></td>
-                  <td className="px-4 py-3 text-[var(--text-muted)]">{p.uploaded}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="btn-ghost px-3 py-1.5 rounded-md text-xs font-semibold text-[var(--brand-600)] hover:bg-[var(--brand-50)] inline-flex items-center gap-1.5">
-                      <Icon name="Download" size={14} /> Download
-                    </button>
-                  </td>
+
+          {error && <p role="alert" className="px-4 py-3 text-sm text-[var(--danger)]">{error}</p>}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--slate-50)]">
+                <tr className="text-left text-xs text-[var(--text-muted)]">
+                  {isHr && <th className="px-4 py-3 font-medium">Employee</th>}
+                  <th className="px-4 py-3 font-medium">Payroll month</th>
+                  <th className="px-4 py-3 font-medium">PDF</th>
+                  <th className="px-4 py-3 font-medium">Uploaded</th>
+                  <th className="px-4 py-3 text-right font-medium">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={isHr ? 5 : 4} className="px-4 py-10 text-center text-[var(--text-muted)]">Loading payslips...</td></tr>
+                ) : payslips.length === 0 ? (
+                  <tr><td colSpan={isHr ? 5 : 4} className="px-4 py-10 text-center text-[var(--text-muted)]">No payslips found for this period.</td></tr>
+                ) : payslips.map((payslip) => (
+                  <tr key={payslip.id} className="border-t border-[var(--border)] hover:bg-[var(--slate-50)]">
+                    {isHr && (
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-[var(--text)]">{payslip.employeeName}</div>
+                        <div className="text-xs text-[var(--text-muted)]">{payslip.employeeCode ?? payslip.employeeEmail}</div>
+                      </td>
+                    )}
+                    <td className="px-4 py-3 font-medium text-[var(--text)]">{formatPeriod(payslip.payrollPeriod)}</td>
+                    <td className="px-4 py-3 text-[var(--text-muted)]">
+                      <span className="inline-flex items-center gap-1.5"><Icon name="FileText" size={14} /> PDF · {formatFileSize(payslip.fileSize)}</span>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--text-muted)]">
+                      {new Date(payslip.uploadedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => void download(payslip)}
+                        disabled={downloading !== null}
+                        className="btn-ghost inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[var(--brand-600)] disabled:opacity-60"
+                      >
+                        <Icon name={downloading === payslip.id ? "LoaderCircle" : "Download"} size={14} className={downloading === payslip.id ? "animate-spin" : ""} />
+                        Download
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-[var(--border)] px-4 py-3 text-xs text-[var(--text-muted)]">
+              <span>Page {page} of {totalPages}</span>
+              <div className="flex gap-2">
+                <button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="btn-ghost px-3 py-1.5 disabled:opacity-50">Previous</button>
+                <button type="button" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)} className="btn-ghost px-3 py-1.5 disabled:opacity-50">Next</button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

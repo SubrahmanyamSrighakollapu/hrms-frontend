@@ -133,7 +133,7 @@ export function RolesTab({ roles, canManage }: { roles: RoleDef[]; canManage: bo
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search roles…"
-              className="input-base py-2 pl-9 text-sm"
+              className="input-base input-base--leading-icon py-2 text-sm"
             />
           </div>
           <span className="text-[0.8rem] text-[var(--text-muted)]">

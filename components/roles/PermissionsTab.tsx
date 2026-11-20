@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
@@ -27,23 +27,23 @@ const LEVEL_NOTE: Record<PermissionLevel, string> = {
 export function PermissionsTab({ roles, canManage }: { roles: RoleDef[]; canManage: boolean }) {
   const toast = useToast();
 
-  const [roleId, setRoleId] = useState<string>(() => roles[0]?.id ?? "");
-  const [draft, setDraft] = useState<Record<string, PermissionLevel>>({});
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
+  const [draftState, setDraftState] = useState<{
+    roleId: string;
+    permissions: Record<string, PermissionLevel>;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Default to the first role, and recover if the selected role disappears.
-  useEffect(() => {
-    if (!roles.length) return;
-    setRoleId((current) => (roles.some((r) => r.id === current) ? current : roles[0].id));
-  }, [roles]);
-
+  // Fall back to the first role whenever the selection is empty or has gone away.
+  const roleId = roles.some((r) => r.id === selectedRoleId) ? selectedRoleId : (roles[0]?.id ?? "");
   const role = useMemo(() => roles.find((r) => r.id === roleId) ?? null, [roles, roleId]);
 
-  // Reload the working copy whenever a different role is selected.
-  useEffect(() => {
-    if (role) setDraft({ ...role.permissions });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role?.id, role?.permissions]);
+  // The working copy, kept separate from the saved permissions until "Save".
+  const draft = useMemo(
+    () => (draftState?.roleId === roleId ? draftState.permissions : (role?.permissions ?? {})),
+    [draftState, roleId, role],
+  );
+  const setDraft = (permissions: Record<string, PermissionLevel>) => setDraftState({ roleId, permissions });
 
   const dirty = useMemo(() => {
     if (!role) return false;
@@ -57,15 +57,19 @@ export function PermissionsTab({ roles, canManage }: { roles: RoleDef[]; canMana
   }, [draft]);
 
   const setLevel = (moduleId: string, level: PermissionLevel) =>
-    setDraft((d) => ({ ...d, [moduleId]: level }));
+    setDraftState((prev) => {
+      const base = prev?.roleId === roleId ? prev.permissions : (role?.permissions ?? {});
+      return { roleId, permissions: { ...base, [moduleId]: level } };
+    });
 
   const setSection = (section: string, level: PermissionLevel) =>
-    setDraft((d) => {
-      const next = { ...d };
+    setDraftState((prev) => {
+      const base = prev?.roleId === roleId ? prev.permissions : (role?.permissions ?? {});
+      const next = { ...base };
       MODULES.filter((m) => m.section === section).forEach((m) => {
         next[m.id] = level;
       });
-      return next;
+      return { roleId, permissions: next };
     });
 
   const save = async () => {
@@ -108,7 +112,7 @@ export function PermissionsTab({ roles, canManage }: { roles: RoleDef[]; canMana
           <select
             id="perm-role"
             value={roleId}
-            onChange={(e) => setRoleId(e.target.value)}
+            onChange={(e) => setSelectedRoleId(e.target.value)}
             className="input-base py-2 text-sm"
           >
             {roles.map((r) => (

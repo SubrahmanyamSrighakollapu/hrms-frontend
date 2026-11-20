@@ -63,10 +63,6 @@ export default function EmployeesPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [departmentId, category, status]);
-
   const params = useMemo(
     () => ({
       q: query || undefined,
@@ -276,10 +272,10 @@ export default function EmployeesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email or code…"
-              className="input-base py-2 pl-9 text-sm"
+              className="input-base input-base--leading-icon py-2 text-sm"
             />
           </div>
-          <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input-base w-auto py-2 text-sm">
+          <select value={departmentId} onChange={(e) => { setPage(1); setDepartmentId(e.target.value); }} className="input-base w-auto py-2 text-sm">
             <option value="">All departments</option>
             {options?.departments.map((d) => (
               <option key={d.id} value={d.id}>{d.name}</option>
@@ -287,7 +283,7 @@ export default function EmployeesPage() {
           </select>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as EmployeeCategory | "")}
+            onChange={(e) => { setPage(1); setCategory(e.target.value as EmployeeCategory | ""); }}
             className="input-base w-auto py-2 text-sm"
           >
             <option value="">All categories</option>
@@ -297,7 +293,7 @@ export default function EmployeesPage() {
           </select>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value as EmployeeStatus | "")}
+            onChange={(e) => { setPage(1); setStatus(e.target.value as EmployeeStatus | ""); }}
             className="input-base w-auto py-2 text-sm"
           >
             <option value="">All statuses</option>

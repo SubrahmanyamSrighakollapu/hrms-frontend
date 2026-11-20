@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Drawer } from "@/components/ui/Drawer";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
@@ -127,18 +127,35 @@ export function EmployeeFormDrawer({
   options: FormOptions | null;
   onSaved: (result: { employee: Employee; temporaryPassword?: string }) => void;
 }) {
+  // Only mounted while open, so the form is refilled from scratch each time
+  // (and remounted when the drawer switches to a different employee).
+  if (!open) return null;
+  return (
+    <EmployeeFormDrawerForm
+      key={employee?.id ?? "create"}
+      onClose={onClose}
+      employee={employee}
+      options={options}
+      onSaved={onSaved}
+    />
+  );
+}
+
+function EmployeeFormDrawerForm({
+  onClose,
+  employee,
+  options,
+  onSaved,
+}: {
+  onClose: () => void;
+  employee?: Employee | null;
+  options: FormOptions | null;
+  onSaved: (result: { employee: Employee; temporaryPassword?: string }) => void;
+}) {
   const isEdit = !!employee;
-  const [form, setForm] = useState<FormState>(EMPTY);
+  const [form, setForm] = useState<FormState>(() => (employee ? fromEmployee(employee) : EMPTY));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Refill the form each time the drawer opens (or switches employee).
-  useEffect(() => {
-    if (!open) return;
-    setError(null);
-    setSaving(false);
-    setForm(employee ? fromEmployee(employee) : EMPTY);
-  }, [open, employee]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -215,7 +232,7 @@ export function EmployeeFormDrawer({
 
   return (
     <Drawer
-      open={open}
+      open
       onClose={onClose}
       size="lg"
       title={isEdit ? `Edit ${employee?.name}` : "Add employee"}

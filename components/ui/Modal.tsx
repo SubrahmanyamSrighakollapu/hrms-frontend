@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 
 type ModalTone = "brand" | "danger" | "warning" | "success";
@@ -32,6 +33,12 @@ export function Modal({
   footer?: ReactNode;
   children?: ReactNode;
 }) {
+  const portalTarget = useSyncExternalStore(
+    () => () => {},
+    () => document.body,
+    () => null,
+  );
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -46,11 +53,11 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !portalTarget) return null;
 
   const style = TONE[tone];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-slate-900/40 overlay-in" onClick={onClose} />
       <div className="card fade-in relative w-full max-w-md p-6" style={{ boxShadow: "var(--shadow-lg)" }}>
@@ -79,6 +86,7 @@ export function Modal({
 
         {footer && <div className="mt-5 flex items-center justify-end gap-2">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    portalTarget,
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 
 /**
@@ -26,6 +27,12 @@ export function Drawer({
   size?: "md" | "lg";
   children: ReactNode;
 }) {
+  const portalTarget = useSyncExternalStore(
+    () => () => {},
+    () => document.body,
+    () => null,
+  );
+
   // Close on Escape and freeze the page behind the panel while it is open.
   useEffect(() => {
     if (!open) return;
@@ -41,9 +48,9 @@ export function Drawer({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !portalTarget) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[70] flex justify-end" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-slate-900/40 overlay-in" onClick={onClose} />
 
@@ -76,6 +83,7 @@ export function Drawer({
           </footer>
         )}
       </aside>
-    </div>
+    </div>,
+    portalTarget,
   );
 }

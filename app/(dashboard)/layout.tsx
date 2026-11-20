@@ -97,22 +97,27 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const moduleId = moduleForPath(pathname);
   const moduleLabel = MODULES.find((m) => m.id === moduleId)?.label ?? "this area";
   const allowed = !moduleId || can(moduleId);
+  const isChatPage = pathname === "/chat";
 
   if (loading || !user) {
     return <LayoutFallback />;
   }
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg)]">
+    <div className={`${isChatPage ? "h-dvh overflow-hidden" : "min-h-screen"} flex bg-[var(--bg)]`}>
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
       />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Navbar onMenuClick={() => setMobileOpen(true)} title={meta.title} subtitle={meta.subtitle} />
-        <main className="relative flex-1 p-4 lg:p-6 fade-in">
+        <main
+          className={`relative flex-1 fade-in ${
+            isChatPage ? "min-h-0 overflow-hidden p-0" : "p-4 lg:p-6"
+          }`}
+        >
           {allowed ? children : <NoAccess moduleLabel={moduleLabel} roleName={role?.name} />}
         </main>
       </div>

@@ -255,18 +255,15 @@ export function updateApprovalFlow(
 export function useTimeOffRequests(params: TimeOffListParams, enabled = true) {
   const key = JSON.stringify(params);
   const [data, setData] = useState<TimeOffListResult | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const [nonce, setNonce] = useState(0);
+  // The request whose response has been applied; `loading` is derived from it.
+  const [settled, setSettled] = useState<string | null>(null);
+  const requestId = `${key}#${nonce}`;
 
   useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
+    if (!enabled) return;
     let active = true;
-    setLoading(true);
-    setError(null);
 
     listRequests(params)
       .then((result) => {
@@ -275,11 +272,11 @@ export function useTimeOffRequests(params: TimeOffListParams, enabled = true) {
       .catch((e) => {
         if (active) {
           setData(null);
-          setError(e instanceof Error ? e.message : "Failed to load requests");
+          setError({ id: requestId, message: e instanceof Error ? e.message : "Failed to load requests" });
         }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setSettled(requestId);
       });
 
     return () => {
@@ -287,28 +284,29 @@ export function useTimeOffRequests(params: TimeOffListParams, enabled = true) {
     };
     // `key` is the stable serialisation of `params`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, nonce, enabled]);
+  }, [requestId, enabled]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { data, loading, error, refresh };
+  return {
+    data,
+    loading: enabled && settled !== requestId,
+    error: error && error.id === requestId ? error.message : null,
+    refresh,
+  };
 }
 
 export function useTimeOffInbox(params: TimeOffListParams, enabled = true) {
   const key = JSON.stringify(params);
   const [data, setData] = useState<TimeOffListResult | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const [nonce, setNonce] = useState(0);
+  const [settled, setSettled] = useState<string | null>(null);
+  const requestId = `${key}#${nonce}`;
 
   useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
+    if (!enabled) return;
     let active = true;
-    setLoading(true);
-    setError(null);
 
     listInbox(params)
       .then((result) => {
@@ -317,38 +315,38 @@ export function useTimeOffInbox(params: TimeOffListParams, enabled = true) {
       .catch((e) => {
         if (active) {
           setData(null);
-          setError(e instanceof Error ? e.message : "Failed to load the approval inbox");
+          setError({ id: requestId, message: e instanceof Error ? e.message : "Failed to load the approval inbox" });
         }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setSettled(requestId);
       });
 
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, nonce, enabled]);
+  }, [requestId, enabled]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { data, loading, error, refresh };
+  return {
+    data,
+    loading: enabled && settled !== requestId,
+    error: error && error.id === requestId ? error.message : null,
+    refresh,
+  };
 }
 
 export function useLeaveBalances(enabled = true) {
   const [balances, setBalances] = useState<LeaveBalance[] | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const [nonce, setNonce] = useState(0);
+  const [settled, setSettled] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
+    if (!enabled) return;
     let active = true;
-    setLoading(true);
-    setError(null);
 
     listLeaveBalances()
       .then((result) => {
@@ -357,11 +355,11 @@ export function useLeaveBalances(enabled = true) {
       .catch((e) => {
         if (active) {
           setBalances(null);
-          setError(e instanceof Error ? e.message : "Failed to load leave balances");
+          setError({ id: String(nonce), message: e instanceof Error ? e.message : "Failed to load leave balances" });
         }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setSettled(nonce);
       });
 
     return () => {
@@ -371,23 +369,23 @@ export function useLeaveBalances(enabled = true) {
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { balances, loading, error, refresh };
+  return {
+    balances,
+    loading: enabled && settled !== nonce,
+    error: error && error.id === String(nonce) ? error.message : null,
+    refresh,
+  };
 }
 
 export function useApprovalFlows(enabled = true) {
   const [flows, setFlows] = useState<ApprovalFlow[] | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const [nonce, setNonce] = useState(0);
+  const [settled, setSettled] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
+    if (!enabled) return;
     let active = true;
-    setLoading(true);
-    setError(null);
 
     listApprovalFlows()
       .then((result) => {
@@ -396,11 +394,11 @@ export function useApprovalFlows(enabled = true) {
       .catch((e) => {
         if (active) {
           setFlows(null);
-          setError(e instanceof Error ? e.message : "Failed to load approval flows");
+          setError({ id: String(nonce), message: e instanceof Error ? e.message : "Failed to load approval flows" });
         }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setSettled(nonce);
       });
 
     return () => {
@@ -410,5 +408,10 @@ export function useApprovalFlows(enabled = true) {
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { flows, loading, error, refresh };
+  return {
+    flows,
+    loading: enabled && settled !== nonce,
+    error: error && error.id === String(nonce) ? error.message : null,
+    refresh,
+  };
 }

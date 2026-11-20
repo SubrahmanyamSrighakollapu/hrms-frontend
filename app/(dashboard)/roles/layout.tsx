@@ -23,6 +23,7 @@ const TABS: TabDef[] = [
 export default function RolesLayout({ children }: { children: React.ReactNode }) {
   const { can } = useAuth();
   const { roles, employees } = useRbac();
+  const pathname = usePathname();
 
   if (!can("roles")) {
     return (
@@ -38,7 +39,6 @@ export default function RolesLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  const pathname = usePathname();
   const countFor = (id: string) => {
     if (id === "roles") return roles.length;
     if (id === "permissions") return MODULES.length;

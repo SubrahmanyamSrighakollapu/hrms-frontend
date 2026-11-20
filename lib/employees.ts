@@ -274,23 +274,24 @@ export function useFormOptions(enabled = true) {
   useEffect(() => {
     if (!enabled) return;
 
-    const sync = () => setOptions(optionsCache);
+    const sync = () => {
+      setOptions(optionsCache);
+      setLoading(false);
+    };
     window.addEventListener(OPTIONS_EVENT, sync);
 
-    if (optionsCache) {
-      setLoading(false);
-    } else if (!optionsInflight) {
+    // A request may already be in flight from another consumer; its completion
+    // emits OPTIONS_EVENT, which resolves this hook through `sync`.
+    if (!optionsCache && !optionsInflight) {
       refreshFormOptions()
         .catch((e) => setError(e instanceof Error ? e.message : "Failed to load form options"))
         .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
     }
 
     return () => window.removeEventListener(OPTIONS_EVENT, sync);
   }, [enabled]);
 
-  return { options, loading, error };
+  return { options, loading: enabled && loading, error };
 }
 
 /* ---------------- react hooks ---------------- */
@@ -298,18 +299,15 @@ export function useFormOptions(enabled = true) {
 export function useEmployees(params: EmployeeListParams, enabled = true) {
   const key = JSON.stringify(params);
   const [data, setData] = useState<EmployeeListResult | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const [nonce, setNonce] = useState(0);
+  // The request whose response has been applied; `loading` is derived from it.
+  const [settled, setSettled] = useState<string | null>(null);
+  const requestId = `${key}#${nonce}`;
 
   useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
+    if (!enabled) return;
     let active = true;
-    setLoading(true);
-    setError(null);
 
     listEmployees(params)
       .then((result) => {
@@ -318,11 +316,11 @@ export function useEmployees(params: EmployeeListParams, enabled = true) {
       .catch((e) => {
         if (active) {
           setData(null);
-          setError(e instanceof Error ? e.message : "Failed to load employees");
+          setError({ id: requestId, message: e instanceof Error ? e.message : "Failed to load employees" });
         }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setSettled(requestId);
       });
 
     return () => {
@@ -330,27 +328,28 @@ export function useEmployees(params: EmployeeListParams, enabled = true) {
     };
     // `key` is the stable serialisation of `params`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, nonce, enabled]);
+  }, [requestId, enabled]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { data, loading, error, refresh };
+  return {
+    data,
+    loading: enabled && settled !== requestId,
+    error: error && error.id === requestId ? error.message : null,
+    refresh,
+  };
 }
 
 export function useEmployee(id: string | null) {
   const [employee, setEmployee] = useState<Employee | null>(null);
-  const [loading, setLoading] = useState(!!id);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const [nonce, setNonce] = useState(0);
+  const [settled, setSettled] = useState<string | null>(null);
+  const requestId = `${id ?? ""}#${nonce}`;
 
   useEffect(() => {
-    if (!id) {
-      setLoading(false);
-      return;
-    }
+    if (!id) return;
     let active = true;
-    setLoading(true);
-    setError(null);
 
     getEmployee(id)
       .then((result) => {
@@ -359,19 +358,25 @@ export function useEmployee(id: string | null) {
       .catch((e) => {
         if (active) {
           setEmployee(null);
-          setError(e instanceof Error ? e.message : "Failed to load the employee");
+          setError({ id: requestId, message: e instanceof Error ? e.message : "Failed to load the employee" });
         }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setSettled(requestId);
       });
 
     return () => {
       active = false;
     };
-  }, [id, nonce]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestId]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { employee, loading, error, refresh };
+  return {
+    employee,
+    loading: !!id && settled !== requestId,
+    error: error && error.id === requestId ? error.message : null,
+    refresh,
+  };
 }

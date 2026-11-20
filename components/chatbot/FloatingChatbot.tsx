@@ -1,20 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
+import { useAuth } from "@/lib/auth-context";
 
 interface Position { x: number; y: number; }
 
 const STORAGE_KEY = "hrms.chatbot.pos";
 
 export function FloatingChatbot() {
+  const { can } = useAuth();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Position | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [messages, setMessages] = useState<{ from: "bot" | "user"; text: string }[]>([
-    { from: "bot", text: "Hi! I'm your HR assistant. How can I help you today?" },
-  ]);
-  const [input, setInput] = useState("");
   const dragOffset = useRef({ x: 0, y: 0 });
   const moved = useRef(false);
   const draggingRef = useRef(false);
@@ -27,6 +26,8 @@ export function FloatingChatbot() {
     if (saved) {
       try {
         const p = JSON.parse(saved);
+        // Read browser-only persisted placement after mount to avoid hydration mismatch.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPos(p);
         posRef.current = p;
         return;
@@ -79,16 +80,6 @@ export function FloatingChatbot() {
     setOpen((o) => !o);
   };
 
-  const send = () => {
-    if (!input.trim()) return;
-    const text = input.trim();
-    setMessages((m) => [...m, { from: "user", text }]);
-    setInput("");
-    setTimeout(() => {
-      setMessages((m) => [...m, { from: "bot", text: autoReply(text) }]);
-    }, 600);
-  };
-
   if (!pos) return null;
 
   return (
@@ -109,68 +100,45 @@ export function FloatingChatbot() {
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--brand-600)] text-white">
             <div className="flex items-center gap-2.5">
               <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center">
-                <Icon name="Bot" size={17} />
+                <Icon name="Command" size={17} />
               </div>
               <div>
-                <div className="text-[0.83rem] font-semibold leading-tight">HR Assistant</div>
-                <div className="text-[0.7rem] text-white/65 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/70" /> Online
-                </div>
+                <div className="text-[0.83rem] font-semibold leading-tight">HRMS shortcuts</div>
+                <div className="text-[0.7rem] text-white/65">Open an available module</div>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} className="h-7 w-7 rounded-md hover:bg-white/15 flex items-center justify-center">
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close shortcuts"
+              className="h-7 w-7 rounded-md hover:bg-white/15 flex items-center justify-center"
+            >
               <Icon name="X" size={16} />
             </button>
           </div>
 
-          {/* Messages */}
-          <div className="h-[300px] overflow-y-auto p-3.5 space-y-2.5 bg-[var(--surface-2)]">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[80%] px-3 py-2 rounded-2xl text-[0.83rem] leading-relaxed ${
-                    m.from === "user"
-                      ? "bg-[var(--brand-600)] text-white rounded-br-md"
-                      : "bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-bl-md"
-                  }`}
-                >
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Quick suggestions */}
-          <div className="px-3.5 py-2 flex flex-wrap gap-1.5 bg-[var(--surface-2)] border-t border-[var(--border)]">
-            {["Leave balance", "Apply leave", "My payslip", "Contact HR"].map((q) => (
-              <button
-                key={q}
-                onClick={() => setInput(q)}
-                className="text-[0.7rem] px-2.5 py-1 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--brand-700)] hover:border-[var(--brand-200)] transition-colors"
+          <div className="p-2.5 bg-[var(--surface-2)]">
+            {[
+              { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", allowed: can("dashboard") },
+              { label: "My Info", href: "/my-info", icon: "User", allowed: can("my-info") },
+              { label: "Time Off", href: "/time-off", icon: "CalendarDays", allowed: can("time-off") },
+              { label: "Payroll", href: "/payroll", icon: "Wallet", allowed: can("payroll") },
+              { label: "Team Chat", href: "/chat", icon: "MessageSquare", allowed: can("chat") },
+              { label: "Reports", href: "/reports", icon: "BarChart3", allowed: can("reports") },
+            ].filter((item) => item.allowed).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--surface)] transition-colors"
               >
-                {q}
-              </button>
+                <Icon name={item.icon} size={16} className="text-[var(--brand-600)]" />
+                {item.label}
+                <Icon name="ArrowRight" size={14} className="ml-auto text-[var(--text-subtle)]" />
+              </Link>
             ))}
-          </div>
-
-          {/* Input */}
-          <div className="flex items-center gap-2 p-2.5 border-t border-[var(--border)] bg-[var(--surface)]">
-            <button className="h-8 w-8 rounded-md text-[var(--text-subtle)] hover:bg-[var(--surface-2)] flex items-center justify-center">
-              <Icon name="Paperclip" size={16} />
-            </button>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder="Type a message..."
-              className="flex-1 input-base py-2 text-[0.83rem]"
-            />
-            <button
-              onClick={send}
-              className="h-8 w-8 rounded-lg bg-[var(--brand-600)] hover:bg-[var(--brand-700)] text-white flex items-center justify-center transition-colors"
-            >
-              <Icon name="Send" size={15} />
-            </button>
+            <p className="px-3 pt-2 text-[0.68rem] text-[var(--text-subtle)]">
+              Conversational assistance is not connected yet.
+            </p>
           </div>
         </div>
       )}
@@ -188,19 +156,10 @@ export function FloatingChatbot() {
           height: 52,
           boxShadow: dragging ? "var(--shadow-lg)" : "0 6px 18px -4px rgba(37,99,235,0.45)",
         }}
-        title="Drag me anywhere • Click to chat"
+        title="Drag me anywhere or open HRMS shortcuts"
       >
         {open ? <Icon name="X" size={21} /> : <Icon name="MessageSquare" size={21} />}
       </button>
     </>
   );
-}
-
-function autoReply(text: string): string {
-  const t = text.toLowerCase();
-  if (t.includes("leave") && t.includes("balance")) return "You have 6 casual days, 4 sick days, and 2 earned leaves remaining this year. Would you like to apply for leave?";
-  if (t.includes("apply")) return "Sure! You can apply for leave from Time Off → Leaves. What type of leave do you need?";
-  if (t.includes("payslip")) return "Your October payslip is available under Payroll. You can download it there.";
-  if (t.includes("contact") || t.includes("hr")) return "You can reach HR at hr@hrms.local or use the Chat module to message Priya directly.";
-  return "I can help with leave, attendance, payroll, and general HR queries. Try asking about your leave balance or payslips!";
 }

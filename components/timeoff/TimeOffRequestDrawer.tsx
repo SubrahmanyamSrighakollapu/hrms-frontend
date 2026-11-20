@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Drawer } from "@/components/ui/Drawer";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
@@ -40,7 +40,6 @@ interface FormState {
   extraHoursDate: string;
   extraHoursFrom: string;
   extraHoursTo: string;
-  extraHours: string;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -61,7 +60,6 @@ const EMPTY: FormState = {
   extraHoursDate: today(),
   extraHoursFrom: "",
   extraHoursTo: "",
-  extraHours: "",
 };
 
 /** Parse "HH:mm" to minutes since midnight (or null). */
@@ -95,36 +93,42 @@ export function TimeOffRequestDrawer({
   defaultType?: TimeOffRequestType;
   onCreated: (request: TimeOffRequest) => void;
 }) {
-  const [form, setForm] = useState<FormState>(EMPTY);
+  // Only mounted while open, so the form state starts fresh on every open.
+  if (!open) return null;
+  return <TimeOffRequestForm onClose={onClose} defaultType={defaultType} onCreated={onCreated} />;
+}
+
+function TimeOffRequestForm({
+  onClose,
+  defaultType,
+  onCreated,
+}: {
+  onClose: () => void;
+  defaultType: TimeOffRequestType;
+  onCreated: (request: TimeOffRequest) => void;
+}) {
+  const [form, setForm] = useState<FormState>(() => ({ ...EMPTY, type: defaultType }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Reset the form each time the drawer opens, pre-selecting the requested type.
-  useEffect(() => {
-    if (!open) return;
-    setError(null);
-    setSaving(false);
-    setForm({ ...EMPTY, type: defaultType });
-  }, [open, defaultType]);
+  // Hand-typed extra-hours value, remembered per time window so a window change
+  // recomputes it while typing inside one window is preserved.
+  const [manualExtraHours, setManualExtraHours] = useState<{ key: string; value: string } | null>(null);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
-
-  // Auto-compute extra hours from the time window (still editable by hand).
-  useEffect(() => {
-    if (form.type !== "EXTRA_HOURS") return;
-    const computed = hoursBetween(form.extraHoursFrom, form.extraHoursTo);
-    if (computed !== null) {
-      setForm((current) =>
-        current.extraHours === String(computed) ? current : { ...current, extraHours: String(computed) },
-      );
-    }
-  }, [form.type, form.extraHoursFrom, form.extraHoursTo]);
 
   const computedHours = useMemo(
     () => hoursBetween(form.extraHoursFrom, form.extraHoursTo),
     [form.extraHoursFrom, form.extraHoursTo],
   );
+
+  const extraWindowKey = `${form.extraHoursFrom}|${form.extraHoursTo}`;
+  const extraHoursValue =
+    manualExtraHours && manualExtraHours.key === extraWindowKey
+      ? manualExtraHours.value
+      : computedHours !== null
+        ? String(computedHours)
+        : (manualExtraHours?.value ?? "");
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -191,7 +195,7 @@ export function TimeOffRequestDrawer({
         setError("The end time must be after the start time.");
         return;
       }
-      const hours = Number(form.extraHours);
+      const hours = Number(extraHoursValue);
       if (!Number.isFinite(hours) || hours <= 0) {
         setError("The extra hours value must be greater than zero.");
         return;
@@ -216,7 +220,7 @@ export function TimeOffRequestDrawer({
 
   return (
     <Drawer
-      open={open}
+      open
       onClose={onClose}
       title={`Apply for ${REQUEST_TYPE_LABEL[form.type].toLowerCase()}`}
       subtitle="Fill in the details below. The request is routed to the configured approver."
@@ -393,8 +397,8 @@ export function TimeOffRequestDrawer({
                   type="number"
                   min={0.25}
                   step={0.25}
-                  value={form.extraHours}
-                  onChange={(e) => set("extraHours", e.target.value)}
+                  value={extraHoursValue}
+                  onChange={(e) => setManualExtraHours({ key: extraWindowKey, value: e.target.value })}
                 />
               </Field>
               <div className="grid grid-cols-2 gap-2 sm:col-span-2">

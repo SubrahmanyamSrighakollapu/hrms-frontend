@@ -171,29 +171,33 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: Side
         </nav>
 
         {/* Footer */}
-        <div className="p-3 border-t border-[var(--border)]">
-          {!collapsed ? (
-            <div className="panel-2 p-3.5">
-              <div className="flex items-center gap-2 text-[0.8rem] font-semibold text-[var(--text)]">
-                <Icon name="Sparkles" size={14} className="text-[var(--brand-600)]" />
-                Need a hand?
+        {can("chat") && (
+          <div className="p-3 border-t border-[var(--border)]">
+            {!collapsed ? (
+              <div className="panel-2 p-3.5">
+                <div className="flex items-center gap-2 text-[0.8rem] font-semibold text-[var(--text)]">
+                  <Icon name="MessageSquare" size={14} className="text-[var(--brand-600)]" />
+                  Need a hand?
+                </div>
+                <p className="text-[var(--text-muted)] text-[0.72rem] mt-1 leading-relaxed">
+                  Open team chat to reach a colleague.
+                </p>
+                <Link href="/chat" onClick={onCloseMobile} className="mt-2.5 block w-full btn-ghost py-1.5 text-center text-xs">
+                  Open team chat
+                </Link>
               </div>
-              <p className="text-[var(--text-muted)] text-[0.72rem] mt-1 leading-relaxed">
-                Reach your HR admin or browse the help centre.
-              </p>
-              <button className="mt-2.5 w-full btn-ghost py-1.5 text-xs">
-                Get support
-              </button>
-            </div>
-          ) : (
-            <button
-              className="w-full h-10 flex items-center justify-center rounded-lg text-[var(--text-subtle)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors"
-              title="Support"
-            >
-              <Icon name="Sparkles" size={18} />
-            </button>
-          )}
-        </div>
+            ) : (
+              <Link
+                href="/chat"
+                onClick={onCloseMobile}
+                className="w-full h-10 flex items-center justify-center rounded-lg text-[var(--text-subtle)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors"
+                title="Open team chat"
+              >
+                <Icon name="MessageSquare" size={18} />
+              </Link>
+            )}
+          </div>
+        )}
       </aside>
     </>
   );
