@@ -13,6 +13,17 @@ const FEATURES = [
   { icon: "Building2", t: "Organization", s: "Departments & reporting lines" },
 ];
 
+/**
+ * Dev-only quick-login presets. Clicking a role fills the email + password
+ * fields; the user still clicks "Sign in" to submit. This makes local testing
+ * fast without auto-submitting (which would hide validation/feedback).
+ */
+const QUICK_LOGINS = [
+  { label: "Admin", email: "admin@hrms.local", password: "Admin@123" },
+  { label: "HR", email: "hr@hrms.local", password: "Hr@12345" },
+  { label: "Employee", email: "employee@hrms.local", password: "Employee@123" },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const { signIn } = useAuth();
@@ -21,6 +32,15 @@ export default function LoginPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeQuick, setActiveQuick] = useState<string | null>(null);
+
+  const fillQuick = (preset: (typeof QUICK_LOGINS)[number]) => {
+    setEmail(preset.email);
+    setPassword(preset.password);
+    setActiveQuick(preset.label);
+    setError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -82,6 +102,33 @@ export default function LoginPage() {
             <div className="mb-6">
               <h2 className="text-[1.35rem] font-semibold text-[var(--text)] tracking-tight">Sign in</h2>
               <p className="text-[0.85rem] text-[var(--text-muted)] mt-1">Welcome back to your workspace.</p>
+            </div>
+
+            {/* Quick-login role tabs (dev convenience) */}
+            <div className="mb-5">
+              <div className="text-[0.72rem] font-medium uppercase tracking-wide text-[var(--text-subtle)] mb-2">
+                Quick login
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {QUICK_LOGINS.map((p) => {
+                  const active = activeQuick === p.label;
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => fillQuick(p)}
+                      className={
+                        "h-9 rounded-lg text-[0.8rem] font-medium border transition-colors " +
+                        (active
+                          ? "bg-[var(--brand-600)] text-white border-[var(--brand-600)]"
+                          : "bg-[var(--surface-2)] text-[var(--text)] border-[var(--border)] hover:bg-[var(--surface)]")
+                      }
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
