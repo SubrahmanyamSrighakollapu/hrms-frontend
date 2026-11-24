@@ -1,7 +1,9 @@
 "use client";
 
+import { cloneElement, isValidElement, useId } from "react";
 import type {
   InputHTMLAttributes,
+  ReactElement,
   ReactNode,
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
@@ -23,15 +25,27 @@ export function Field({
   htmlFor?: string;
   children: ReactNode;
 }) {
+  // Associate the label with its control even when the caller does not wire up
+  // htmlFor/id manually, so the label is clickable and announced by assistive
+  // tech. Explicit ids passed by the caller always win.
+  const generatedId = useId();
+  const isElement = isValidElement(children);
+  const childId = isElement ? (children.props as { id?: string }).id : undefined;
+  const controlId = htmlFor ?? childId ?? (isElement && label ? generatedId : undefined);
+  const control =
+    isElement && !childId && controlId
+      ? cloneElement(children as ReactElement<{ id?: string }>, { id: controlId })
+      : children;
+
   return (
     <div>
       {label && (
-        <label htmlFor={htmlFor} className="mb-1.5 block text-[0.78rem] font-medium text-[var(--text)]">
+        <label htmlFor={controlId} className="mb-1.5 block text-[0.78rem] font-medium text-[var(--text)]">
           {label}
           {required && <span className="ml-0.5 text-[var(--danger)]">*</span>}
         </label>
       )}
-      {children}
+      {control}
       {error ? (
         <p className="mt-1 text-[0.72rem] text-[var(--danger)]">{error}</p>
       ) : hint ? (

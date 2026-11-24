@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
+import { TablePagination, useClientPagination } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 import { listEmployees, type Employee } from "@/lib/employees";
 import {
@@ -55,6 +56,8 @@ export default function SettingsPage() {
   const [savingBalance, setSavingBalance] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
+
+  const pag = useClientPagination(balances, 10);
 
   useEffect(() => {
     let active = true;
@@ -203,7 +206,7 @@ export default function SettingsPage() {
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-[var(--border)] text-left text-xs text-[var(--text-subtle)]"><th className="pb-2">Employee</th><th className="pb-2">Department</th><th className="pb-2">Leave type</th><th className="pb-2 text-right">Used</th><th className="pb-2 text-right">Entitlement</th><th className="pb-2 text-right">Remaining</th><th className="pb-2 text-right">Action</th></tr></thead>
                 <tbody>
-                  {balances.map((balance) => (
+                  {pag.pageItems.map((balance) => (
                     <tr key={balance.id} className="border-b border-[var(--border)] last:border-0">
                       <td className="py-3"><p className="font-medium text-[var(--text)]">{balance.employeeName}</p><p className="text-xs text-[var(--text-muted)]">{balance.employeeCode ?? balance.email}</p></td>
                       <td className="py-3 text-[var(--text-muted)]">{balance.department ?? "—"}</td>
@@ -218,6 +221,15 @@ export default function SettingsPage() {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              page={pag.page}
+              pageSize={pag.pageSize}
+              total={pag.total}
+              totalPages={pag.totalPages}
+              onPageChange={pag.setPage}
+              onPageSizeChange={pag.setPageSize}
+              label="leave balances"
+            />
           </section>
         </>
       )}

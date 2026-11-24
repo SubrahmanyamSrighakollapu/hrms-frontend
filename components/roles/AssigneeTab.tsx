@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Badge } from "@/components/ui/Badge";
+import { TablePagination, useClientPagination } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 import { assignRole, initials, type EmployeeDef, type RoleDef } from "@/lib/rbac";
 
@@ -48,6 +49,8 @@ export function AssigneeTab({
         e.dept.toLowerCase().includes(q),
     );
   }, [assigned, search]);
+
+  const pag = useClientPagination(filtered, 10);
 
   const add = async () => {
     if (!pick || !roleId) return;
@@ -98,7 +101,7 @@ export function AssigneeTab({
           <select
             id="assignee-role"
             value={roleId}
-            onChange={(e) => { setSelectedRoleId(e.target.value); setPick(""); }}
+            onChange={(e) => { setSelectedRoleId(e.target.value); setPick(""); pag.setPage(1); }}
             className="input-base py-2 text-sm"
           >
             {roles.map((r) => (
@@ -150,7 +153,7 @@ export function AssigneeTab({
             <Icon name="Search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); pag.setPage(1); }}
               placeholder="Search assignees…"
               className="input-base input-base--leading-icon py-2 text-sm"
             />
@@ -169,7 +172,7 @@ export function AssigneeTab({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((employee) => (
+              {pag.pageItems.map((employee) => (
                 <tr key={employee.id} className="border-t border-[var(--border)] transition-colors hover:bg-[var(--slate-50)]">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -214,6 +217,16 @@ export function AssigneeTab({
             </tbody>
           </table>
         </div>
+
+        <TablePagination
+          page={pag.page}
+          pageSize={pag.pageSize}
+          total={pag.total}
+          totalPages={pag.totalPages}
+          onPageChange={pag.setPage}
+          onPageSizeChange={pag.setPageSize}
+          label="employees"
+        />
       </div>
     </div>
   );

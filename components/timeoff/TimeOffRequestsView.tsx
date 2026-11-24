@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
+import { TablePagination } from "@/components/ui/Pagination";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { TimeOffRequestDrawer } from "@/components/timeoff/TimeOffRequestDrawer";
@@ -252,34 +253,15 @@ export function TimeOffRequestsView({ type }: { type: TimeOffRequestType }) {
         </div>
 
         {/* Pagination */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-3 text-sm text-[var(--text-muted)]">
-          <span>
-            {data
-              ? `Showing ${requests.length} of ${data.total} request${data.total === 1 ? "" : "s"}`
-              : "—"}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || loading}
-              className="btn-ghost inline-flex h-8 items-center gap-1.5 px-2.5 text-xs disabled:opacity-50"
-            >
-              <Icon name="ChevronLeft" size={14} /> Prev
-            </button>
-            <span className="text-xs">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || loading}
-              className="btn-ghost inline-flex h-8 items-center gap-1.5 px-2.5 text-xs disabled:opacity-50"
-            >
-              Next <Icon name="ChevronRight" size={14} />
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={data?.total ?? 0}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          loading={loading}
+          label="requests"
+        />
       </div>
 
       <TimeOffRequestDrawer

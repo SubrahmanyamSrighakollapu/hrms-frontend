@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
 import { useToast } from "@/components/ui/Toast";
+import { useAuth } from "@/lib/auth-context";
 import { useRbac } from "@/lib/rbac";
 import {
   REQUEST_TYPE_ICON,
@@ -20,6 +21,26 @@ import {
  * pending requests keep their originally assigned approver role.
  */
 export default function ApprovalFlowsPage() {
+  const { can } = useAuth();
+
+  if (!can("roles", "MANAGE")) {
+    return (
+      <div className="mx-auto max-w-lg card p-10 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--danger-bg)] text-[var(--danger)]">
+          <Icon name="ShieldCheck" size={22} />
+        </div>
+        <h3 className="mt-4 font-semibold text-[var(--text)]">Restricted area</h3>
+        <p className="mt-1.5 text-[0.85rem] text-[var(--text-muted)]">
+          Only roles with the Roles &amp; Permissions module can configure approval flow.
+        </p>
+      </div>
+    );
+  }
+
+  return <ApprovalFlowsForm />;
+}
+
+function ApprovalFlowsForm() {
   const toast = useToast();
   const { roles } = useRbac();
   const { flows, loading, error, refresh } = useApprovalFlows(true);

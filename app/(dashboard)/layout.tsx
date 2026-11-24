@@ -5,11 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { FloatingChatbot } from "@/components/chatbot/FloatingChatbot";
-import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/lib/auth-context";
 import { moduleForPath } from "@/lib/nav-config";
-import { MODULES } from "@/lib/rbac";
-import Link from "next/link";
 
 const TITLES: Record<string, { title: string; subtitle?: string }> = {
   "/dashboard": { title: "Dashboard", subtitle: "Welcome back, here's what's happening today" },
@@ -25,6 +22,12 @@ const TITLES: Record<string, { title: string; subtitle?: string }> = {
   "/payroll": { title: "Payroll", subtitle: "View and download your payslips" },
   "/employees": { title: "Employees", subtitle: "Manage your organization's people" },
   "/chat": { title: "Chat", subtitle: "Connect with your team" },
+  "/desk-management": { title: "Desk Management", subtitle: "Book a desk for the day" },
+  "/calendars": { title: "Calendar", subtitle: "Birthdays, anniversaries, new joinees and holidays" },
+  "/events": { title: "Events", subtitle: "Company events and RSVPs" },
+  "/it-support": { title: "IT Support", subtitle: "Report technical issues and track IT requests" },
+  "/hr-helpdesk": { title: "HR Help Desk", subtitle: "Ask HR questions and track employee queries" },
+  "/expenses": { title: "Expenses", subtitle: "Submit claims, track approvals and reimbursements" },
   "/reports": { title: "Reports", subtitle: "Analytics and insights" },
   "/organization": { title: "Organization", subtitle: "Departments and structure" },
   "/organization/departments": { title: "Departments", subtitle: "Manage departments" },
@@ -35,25 +38,7 @@ const TITLES: Record<string, { title: string; subtitle?: string }> = {
   "/settings": { title: "Settings", subtitle: "Workspace configuration" },
 };
 
-/** Shown when the signed-in role has no access to the requested module. */
-function NoAccess({ moduleLabel, roleName }: { moduleLabel: string; roleName?: string }) {
-  return (
-    <div className="card p-10 max-w-lg mx-auto text-center fade-in">
-      <div className="h-12 w-12 rounded-xl bg-[var(--danger-bg)] text-[var(--danger)] flex items-center justify-center mx-auto">
-        <Icon name="ShieldCheck" size={22} />
-      </div>
-      <h3 className="mt-4 text-[1rem] font-semibold text-[var(--text)]">No access to {moduleLabel}</h3>
-      <p className="text-[0.85rem] text-[var(--text-muted)] mt-1.5 leading-relaxed">
-        Your role{roleName ? ` (${roleName})` : ""} does not include this module.
-        Ask your administrator to grant it under Roles &amp; Permissions.
-      </p>
-      <Link href="/dashboard" className="btn-primary inline-flex items-center gap-2 h-9 px-4 mt-5 text-[0.84rem]">
-        Back to dashboard
-      </Link>
-    </div>
-  );
-}
-
+/** Shown while the route is loading or the user is being redirected. */
 function LayoutFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
@@ -80,12 +65,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { can, role, user, loading } = useAuth();
-
-  // No session → back to sign in.
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
+  const { can, user, loading } = useAuth();
 
   const meta =
     TITLES[pathname] ??
@@ -95,11 +75,21 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   // Access is derived from the role assigned to the signed-in employee.
   const moduleId = moduleForPath(pathname);
-  const moduleLabel = MODULES.find((m) => m.id === moduleId)?.label ?? "this area";
   const allowed = !moduleId || can(moduleId);
   const isChatPage = pathname === "/chat";
 
-  if (loading || !user) {
+  // No session → back to sign in.
+  useEffect(() => {
+    if (!loading && !user) router.replace("/login");
+  }, [loading, user, router]);
+
+  // Authenticated but no access to this module → send them to their dashboard
+  // instead of showing a "No access" screen.
+  useEffect(() => {
+    if (!loading && user && !allowed) router.replace("/dashboard");
+  }, [loading, user, allowed, router]);
+
+  if (loading || !user || !allowed) {
     return <LayoutFallback />;
   }
 
@@ -118,7 +108,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             isChatPage ? "min-h-0 overflow-hidden p-0" : "p-4 lg:p-6"
           }`}
         >
-          {allowed ? children : <NoAccess moduleLabel={moduleLabel} roleName={role?.name} />}
+          {children}
         </main>
       </div>
       <FloatingChatbot />

@@ -30,6 +30,8 @@ interface FormState {
   phone: string;
   designation: string;
   departmentId: string;
+  locationId: string;
+  subLocationId: string;
   roleId: string;
   managerId: string;
   category: EmployeeCategory;
@@ -54,6 +56,8 @@ const EMPTY: FormState = {
   phone: "",
   designation: "",
   departmentId: "",
+  locationId: "",
+  subLocationId: "",
   roleId: "",
   managerId: "",
   category: "FRESHER",
@@ -79,6 +83,8 @@ function fromEmployee(employee: Employee): FormState {
     phone: employee.phone ?? "",
     designation: employee.designation ?? "",
     departmentId: employee.departmentId ?? "",
+    locationId: employee.locationId ?? "",
+    subLocationId: employee.subLocationId ?? "",
     roleId: employee.roleId ?? "",
     managerId: employee.managerId ?? "",
     category: employee.category,
@@ -160,6 +166,24 @@ function EmployeeFormDrawerForm({
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
+  // Sub-locations are scoped to their parent location; switching location drops
+  // a sub-location that no longer belongs.
+  const changeLocation = (locationId: string) =>
+    setForm((current) => {
+      const stillValid = (options?.subLocations ?? []).some(
+        (sub) => sub.id === current.subLocationId && sub.locationId === locationId,
+      );
+      return {
+        ...current,
+        locationId,
+        subLocationId: stillValid ? current.subLocationId : "",
+      };
+    });
+
+  const locationSubLocations = (options?.subLocations ?? []).filter(
+    (sub) => sub.locationId === form.locationId,
+  );
+
   const probationMonths = PROBATION_MONTHS[form.category];
   const probationHint = probationMonths
     ? `Leave blank to set automatically: ${probationMonths} months after the joining date.`
@@ -193,6 +217,8 @@ function EmployeeFormDrawerForm({
       phone: form.phone.trim() || null,
       designation: form.designation.trim() || null,
       departmentId: form.departmentId || null,
+      locationId: form.locationId || null,
+      subLocationId: form.subLocationId || null,
       roleId: form.roleId || null,
       managerId: form.managerId || null,
       category: form.category,
@@ -305,7 +331,36 @@ function EmployeeFormDrawerForm({
             <Select id="emp-department" value={form.departmentId} onChange={(e) => set("departmentId", e.target.value)}>
               <option value="">Unassigned</option>
               {options?.departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+                <option key={d.id} value={d.id}>
+                  {d.parentName ? `${d.parentName} › ${d.name}` : d.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Location" htmlFor="emp-location" hint={!options ? "Loading locations…" : undefined}>
+            <Select id="emp-location" value={form.locationId} onChange={(e) => changeLocation(e.target.value)}>
+              <option value="">No location</option>
+              {options?.locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}{l.isDefault ? " (default)" : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field
+            label="Sub-location"
+            htmlFor="emp-sublocation"
+            hint={!form.locationId ? "Choose a location first." : undefined}
+          >
+            <Select
+              id="emp-sublocation"
+              value={form.subLocationId}
+              onChange={(e) => set("subLocationId", e.target.value)}
+              disabled={!form.locationId}
+            >
+              <option value="">No sub-location</option>
+              {locationSubLocations.map((sub) => (
+                <option key={sub.id} value={sub.id}>{sub.name}</option>
               ))}
             </Select>
           </Field>

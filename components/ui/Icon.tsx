@@ -10,6 +10,8 @@ import {
   UserPlus, Lock, ShieldHalf, CircleHelp,
   Smile, Pin, PinOff, Image, FileText, File, Reply, Forward, Archive, BellOff, LoaderCircle,
   Crown, CheckCheck, Volume2, VolumeX, ExternalLink, MessageSquarePlus, AtSign, Upload, UserMinus,
+  Building, AlertTriangle, GraduationCap, PauseCircle, PlayCircle, Armchair, CalendarRange, PartyPopper,
+  LifeBuoy, Headphones, Ticket, Receipt, CreditCard, Banknote,
   type LucideProps,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -27,6 +29,8 @@ const map = {
   CircleHelp,
   Smile, Pin, PinOff, Image, FileText, File, Reply, Forward, Archive, BellOff, LoaderCircle,
   Crown, CheckCheck, Volume2, VolumeX, ExternalLink, MessageSquarePlus, AtSign, Upload, UserMinus,
+  Building, AlertTriangle, GraduationCap, PauseCircle, PlayCircle, Armchair, CalendarRange, PartyPopper,
+  LifeBuoy, Headphones, Ticket, Receipt, CreditCard, Banknote,
 } satisfies Record<string, ComponentType<LucideProps>>;
 
 export type IconName = keyof typeof map;

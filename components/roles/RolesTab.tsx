@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { TablePagination, useClientPagination } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 import {
   createRole,
@@ -34,6 +35,8 @@ export function RolesTab({ roles, canManage }: { roles: RoleDef[]; canManage: bo
       (r) => r.name.toLowerCase().includes(q) || (r.description ?? "").toLowerCase().includes(q),
     );
   }, [roles, search]);
+
+  const pag = useClientPagination(filtered, 10);
 
   const add = async () => {
     const value = name.trim();
@@ -131,7 +134,7 @@ export function RolesTab({ roles, canManage }: { roles: RoleDef[]; canManage: bo
             <Icon name="Search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); pag.setPage(1); }}
               placeholder="Search roles…"
               className="input-base input-base--leading-icon py-2 text-sm"
             />
@@ -154,7 +157,7 @@ export function RolesTab({ roles, canManage }: { roles: RoleDef[]; canManage: bo
               </tr>
             </thead>
             <tbody>
-              {filtered.map((role) => {
+              {pag.pageItems.map((role) => {
                 const stats = roleStats(role);
                 return (
                   <tr key={role.id} className="border-t border-[var(--border)] transition-colors hover:bg-[var(--slate-50)]">
@@ -224,9 +227,17 @@ export function RolesTab({ roles, canManage }: { roles: RoleDef[]; canManage: bo
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Edit role */}
+        <TablePagination
+          page={pag.page}
+          pageSize={pag.pageSize}
+          total={pag.total}
+          totalPages={pag.totalPages}
+          onPageChange={pag.setPage}
+          onPageSizeChange={pag.setPageSize}
+          label="roles"
+        />
+      </div>
       <Modal
         open={!!editTarget}
         onClose={() => setEditTarget(null)}

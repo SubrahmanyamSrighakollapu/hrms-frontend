@@ -247,6 +247,7 @@ export default function EmployeeDetailPage() {
               { i: "Mail", l: employee.email },
               { i: "Phone", l: employee.phone ?? "—" },
               { i: "Briefcase", l: employee.department ?? "Unassigned" },
+              { i: "MapPin", l: employee.location ?? "Unassigned" },
               { i: "Calendar", l: `Joined ${formatDate(employee.joinedAt)}` },
             ].map((row) => (
               <div key={row.l} className="flex items-center gap-3 text-sm">
@@ -263,6 +264,11 @@ export default function EmployeeDetailPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Info label="Designation" value={employee.designation ?? "—"} />
               <Info label="Department" value={employee.department ?? "Unassigned"} />
+              <Info label="Location" value={employee.location ?? "Unassigned"} />
+              <Info
+                label="Sub-location"
+                value={employee.location ? employee.subLocation ?? "—" : "—"}
+              />
               <Info label="Reporting manager" value={employee.managerName ?? "—"} />
               <Info label="Employment type" value={EMPLOYMENT_TYPE_LABEL[employee.employmentType]} />
               <Info label="Role" value={employee.roleName ?? "No role"} />

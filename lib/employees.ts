@@ -20,6 +20,21 @@ export type EmployeeCategory = "INTERN" | "FRESHER" | "EXPERIENCED" | "CONTRACT"
 export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN";
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 export type EmployeeStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
+export type MaritalStatus = "SINGLE" | "MARRIED" | "DIVORCED" | "WIDOWED";
+
+/** Blood group options for the self-service profile. */
+export const BLOOD_GROUPS = [
+  "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-",
+] as const;
+export type BloodGroup = (typeof BLOOD_GROUPS)[number];
+
+export const MARITAL_STATUSES: MaritalStatus[] = ["SINGLE", "MARRIED", "DIVORCED", "WIDOWED"];
+export const MARITAL_STATUS_LABEL: Record<MaritalStatus, string> = {
+  SINGLE: "Single",
+  MARRIED: "Married",
+  DIVORCED: "Divorced",
+  WIDOWED: "Widowed",
+};
 
 export const CATEGORIES: EmployeeCategory[] = ["INTERN", "FRESHER", "EXPERIENCED", "CONTRACT"];
 export const CATEGORY_LABEL: Record<EmployeeCategory, string> = {
@@ -84,6 +99,10 @@ export interface Employee {
   designation: string | null;
   departmentId: string | null;
   department: string | null;
+  locationId: string | null;
+  location: string | null;
+  subLocationId: string | null;
+  subLocation: string | null;
   managerId: string | null;
   managerName: string | null;
   roleId: string | null;
@@ -97,6 +116,16 @@ export interface Employee {
   address: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  emergencyContactRelationship: string | null;
+  onboardingCompleted: boolean;
+  bankName: string | null;
+  bankAccount: string | null;
+  ifsc: string | null;
+  pan: string | null;
+  aadhaar: string | null;
+  uan: string | null;
+  bloodGroup: string | null;
+  maritalStatus: MaritalStatus | null;
   lastLoginAt: string | null;
   createdAt: string;
 }
@@ -118,9 +147,19 @@ export interface EmployeeListResult {
 }
 
 export interface FormOptions {
-  departments: { id: string; name: string; code: string | null }[];
+  departments: {
+    id: string;
+    name: string;
+    code: string | null;
+    parentId: string | null;
+    parentName: string | null;
+  }[];
   roles: { id: string; name: string }[];
   managers: { id: string; name: string; email: string }[];
+  /** Active locations an employee can be assigned to. */
+  locations: { id: string; name: string; isDefault: boolean }[];
+  /** Active sub-locations, each tied to its parent location via `locationId`. */
+  subLocations: { id: string; name: string; locationId: string; type: string }[];
 }
 
 export interface EmployeeListParams {
@@ -143,6 +182,8 @@ export interface EmployeePayload {
   departmentId?: string | null;
   roleId?: string | null;
   managerId?: string | null;
+  locationId?: string | null;
+  subLocationId?: string | null;
   category?: EmployeeCategory;
   employmentType?: EmploymentType;
   priorExperienceMonths?: number;
@@ -155,7 +196,72 @@ export interface EmployeePayload {
   address?: string | null;
   emergencyContactName?: string | null;
   emergencyContactPhone?: string | null;
+  emergencyContactRelationship?: string | null;
+  onboardingCompleted?: boolean;
+  bankName?: string | null;
+  bankAccount?: string | null;
+  ifsc?: string | null;
+  pan?: string | null;
+  aadhaar?: string | null;
+  uan?: string | null;
+  bloodGroup?: string | null;
+  maritalStatus?: MaritalStatus | null;
   password?: string;
+}
+
+/* ---------- My Info child collections (self-scoped) ---------- */
+
+export interface WorkExperience {
+  id: string;
+  company: string;
+  designation: string | null;
+  fromDate: string;
+  toDate: string | null;
+  currentlyWorking: boolean;
+  description: string | null;
+}
+
+export interface WorkExperienceInput {
+  company: string;
+  designation?: string | null;
+  fromDate: string;
+  toDate?: string | null;
+  currentlyWorking?: boolean;
+  description?: string | null;
+}
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  relationship: string;
+  dateOfBirth: string | null;
+  phone: string | null;
+}
+
+export interface FamilyMemberInput {
+  name: string;
+  relationship: string;
+  dateOfBirth?: string | null;
+  phone?: string | null;
+}
+
+export interface Education {
+  id: string;
+  institution: string;
+  degree: string;
+  fieldOfStudy: string | null;
+  fromYear: number;
+  toYear: number | null;
+  percentage: number | null;
+}
+
+export interface EducationInput {
+  institution: string;
+  degree: string;
+  fieldOfStudy?: string | null;
+  fromYear: number;
+  toYear?: number | null;
+  percentage?: number | null;
 }
 
 /* ---------------- helpers ---------------- */
@@ -228,6 +334,56 @@ export function getMyProfile(): Promise<{ employee: Employee }> {
 
 export function updateMyProfile(payload: EmployeePayload): Promise<{ employee: Employee }> {
   return api.patch<{ employee: Employee }>("/employees/me", payload);
+}
+
+/* ---------- My Info child collections (self-scoped) ---------- */
+
+export function listWorkExperience(): Promise<WorkExperience[]> {
+  return api.get<{ workExperience: WorkExperience[] }>("/employees/me/work-experience").then((r) => r.workExperience);
+}
+
+export function createWorkExperience(input: WorkExperienceInput): Promise<WorkExperience> {
+  return api.post<{ workExperience: WorkExperience }>("/employees/me/work-experience", input).then((r) => r.workExperience);
+}
+
+export function updateWorkExperience(id: string, input: Partial<WorkExperienceInput>): Promise<WorkExperience> {
+  return api.patch<{ workExperience: WorkExperience }>(`/employees/me/work-experience/${id}`, input).then((r) => r.workExperience);
+}
+
+export function deleteWorkExperience(id: string): Promise<{ id: string }> {
+  return api.del<{ id: string }>(`/employees/me/work-experience/${id}`);
+}
+
+export function listFamilyMembers(): Promise<FamilyMember[]> {
+  return api.get<{ familyMembers: FamilyMember[] }>("/employees/me/family").then((r) => r.familyMembers);
+}
+
+export function createFamilyMember(input: FamilyMemberInput): Promise<FamilyMember> {
+  return api.post<{ familyMember: FamilyMember }>("/employees/me/family", input).then((r) => r.familyMember);
+}
+
+export function updateFamilyMember(id: string, input: Partial<FamilyMemberInput>): Promise<FamilyMember> {
+  return api.patch<{ familyMember: FamilyMember }>(`/employees/me/family/${id}`, input).then((r) => r.familyMember);
+}
+
+export function deleteFamilyMember(id: string): Promise<{ id: string }> {
+  return api.del<{ id: string }>(`/employees/me/family/${id}`);
+}
+
+export function listEducation(): Promise<Education[]> {
+  return api.get<{ education: Education[] }>("/employees/me/education").then((r) => r.education);
+}
+
+export function createEducation(input: EducationInput): Promise<Education> {
+  return api.post<{ education: Education }>("/employees/me/education", input).then((r) => r.education);
+}
+
+export function updateEducation(id: string, input: Partial<EducationInput>): Promise<Education> {
+  return api.patch<{ education: Education }>(`/employees/me/education/${id}`, input).then((r) => r.education);
+}
+
+export function deleteEducation(id: string): Promise<{ id: string }> {
+  return api.del<{ id: string }>(`/employees/me/education/${id}`);
 }
 
 /* ---------------- form options cache ----------------

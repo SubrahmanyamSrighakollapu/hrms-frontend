@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEv
 import { useAuth } from "@/lib/auth-context";
 import { Icon } from "@/components/ui/Icon";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { TablePagination } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 import {
   downloadPayslip,
@@ -343,15 +344,15 @@ export default function PayrollPage() {
               </tbody>
             </table>
           </div>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-[var(--border)] px-4 py-3 text-xs text-[var(--text-muted)]">
-              <span>Page {page} of {totalPages}</span>
-              <div className="flex gap-2">
-                <button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="btn-ghost px-3 py-1.5 disabled:opacity-50">Previous</button>
-                <button type="button" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)} className="btn-ghost px-3 py-1.5 disabled:opacity-50">Next</button>
-              </div>
-            </div>
-          )}
+          <TablePagination
+            page={page}
+            pageSize={50}
+            total={total}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            loading={loading}
+            label="payslips"
+          />
         </section>
       )}
     </div>

@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
+import { TablePagination } from "@/components/ui/Pagination";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Textarea } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { useAuth } from "@/lib/auth-context";
 import {
   LEAVE_TYPE_LABEL,
   REQUEST_TYPE_ICON,
@@ -44,6 +46,26 @@ function requestSummary(r: TimeOffRequest): string {
 }
 
 export default function ApprovalsPage() {
+  const { can } = useAuth();
+
+  if (!can("time-off", "MANAGE")) {
+    return (
+      <div className="mx-auto max-w-lg card p-10 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--danger-bg)] text-[var(--danger)]">
+          <Icon name="ShieldCheck" size={22} />
+        </div>
+        <h3 className="mt-4 font-semibold text-[var(--text)]">Restricted area</h3>
+        <p className="mt-1.5 text-[0.85rem] text-[var(--text-muted)]">
+          Only managers with approval rights can open the approval inbox.
+        </p>
+      </div>
+    );
+  }
+
+  return <ApprovalsInbox />;
+}
+
+function ApprovalsInbox() {
   const toast = useToast();
   const [typeFilter, setTypeFilter] = useState<TimeOffRequestType | "">("");
   const [statusFilter, setStatusFilter] = useState<TimeOffRequestStatus | "">("PENDING");
@@ -218,34 +240,15 @@ export default function ApprovalsPage() {
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-3 text-sm text-[var(--text-muted)]">
-          <span>
-            {data
-              ? `Showing ${requests.length} of ${data.total} request${data.total === 1 ? "" : "s"}`
-              : "—"}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || loading}
-              className="btn-ghost inline-flex h-8 items-center gap-1.5 px-2.5 text-xs disabled:opacity-50"
-            >
-              <Icon name="ChevronLeft" size={14} /> Prev
-            </button>
-            <span className="text-xs">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || loading}
-              className="btn-ghost inline-flex h-8 items-center gap-1.5 px-2.5 text-xs disabled:opacity-50"
-            >
-              Next <Icon name="ChevronRight" size={14} />
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={data?.total ?? 0}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          loading={loading}
+          label="requests"
+        />
       </div>
 
       <Modal
